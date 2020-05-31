@@ -4,7 +4,7 @@ from pygame.locals import *
 # game field size
 FIELD_X = 10
 FIELD_Y = 10
-FIELD_CELL_SIZE = 50
+FIELD_CELL_SIZE = 30
 WINDOWWIDTH = FIELD_X * FIELD_CELL_SIZE
 WINDOWHEIGHT = FIELD_Y * FIELD_CELL_SIZE
 
@@ -18,15 +18,17 @@ BACKGROUND_COLOR = (10, 10, 10)
 SNAKE_COLOR = (50, 200, 50)
 FOOD_COLOR = (220, 220, 50)
 COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR}
+
+
 # TODO: Add obstacles
 
 
 class FieldObject:
     def __init__(self, object_type):
         # self.length = 0
-        self.body = [[0, 0]]
-        # starting position of the snake's head
-        self.position = [0, 0]
+        self.body = [[3, 0]]
+        # starting position of the snake's head   --- not needed?
+        # self.position = [1, 0]
         # The type of field object
         self.object_type = object_type
 
@@ -35,17 +37,53 @@ class Snake(FieldObject):
     def __init__(self):
         super(Snake, self).__init__(SNAKE_FIELD)
         self.direction = [1, 0]
-        pass
+        self.body.append([2, 0])
+        self.body.append([1, 0])
 
     def change_direction(self, key):
-        if key == K_w:      # up
-            self.direction = [0, -1]
-        elif key == K_s:    # down
-            self.direction = [0, 1]
-        elif key == K_a:    # left
-            self.direction = [-1, 0]
-        elif key == K_d:    # right
-            self.direction = [1, 0]
+        if key == K_w:  # up
+            d = [0, -1]
+        elif key == K_s:  # down
+            d = [0, 1]
+        elif key == K_a:  # left
+            d = [-1, 0]
+        elif key == K_d:  # right
+            d = [1, 0]
+        else:
+            return
+        # Check if proposed direction (d) is not the opposite of current direction
+        if [x + y for x, y in zip(d, self.direction)] == [0, 0]:
+            return
+        self.direction = d
+
+    def move(self):
+        tail = len(self.body) - 1
+        # Move the snake's body towards the head. Move the head towards snake.direction
+        for i in reversed(range(len(self.body))):
+            if i > 0:
+                self.body[i] = self.body[i - 1]
+            else:
+                # Move the head of the snake
+                self.body[0] = [pos_x(self.body[0][0] + self.direction[0]),
+                                pos_y(self.body[0][1] + self.direction[1])]
+
+
+def pos_x(x):
+    # returns a proper coordinate for x, taking field borders into account
+    if x < 0:
+        x = x + FIELD_X
+    if x > FIELD_X - 1:
+        x = x - FIELD_X
+    return x
+
+
+def pos_y(y):
+    # returns a proper coordinate for y, taking field borders into account
+    if y < 0:
+        y = y + FIELD_Y
+    if y > FIELD_Y - 1:
+        y = y - FIELD_Y
+    return y
 
 
 class Field:
@@ -69,47 +107,28 @@ class Field:
         self.objects.append(obj)
         # Update the field
         for cell in obj.body:
-            self.field_matrix[cell[0]][cell[1]] = obj.object_type
+            self.field_matrix[pos_x(cell[0])][pos_y(cell[1])] = obj.object_type
 
     def draw(self):
+        self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
+        for obj in self.objects:
+            for cell in obj.body:
+                self.field_matrix[cell[0]][cell[1]] = obj.object_type
         self.surface.fill(BACKGROUND_COLOR)
         for i in range(FIELD_X):
             for j in range(FIELD_Y):
                 pygame.draw.rect(self.surface, COLOR_MATRIX[self.field_matrix[i][j]],
-                                 (i*FIELD_CELL_SIZE, j*FIELD_CELL_SIZE, FIELD_CELL_SIZE, FIELD_CELL_SIZE))
+                                 (i * FIELD_CELL_SIZE, j * FIELD_CELL_SIZE, FIELD_CELL_SIZE, FIELD_CELL_SIZE))
         pygame.display.update()
         pass
 
     def next_step(self):
+        # TODO: Add collision with your own body
         # TODO: Add food collision
         # TODO: Add obstacle collision
 
         # If everything is all right, move the snake
-        # 1. Clear the snake's tail in the field_matrix
-        tail = len(self.snake.body)-1
-        self.field_matrix[self.snake.body[tail][0]][self.snake.body[tail][1]] = EMPTY_FIELD
-        # 2. Move the snake body towards the head. Move the head towards snake.direction
-        for i in reversed(range(len(self.snake.body))):
-            if i > 0:
-                self.snake.body[i] = self.snake.body[i-1]
-            else:
-                # Move the head of the snake
-                head = self.snake.body[0]
-                # Move the x axis:
-                head[0] += self.snake.direction[0]
-                if head[0] < 0:
-                    head[0] = FIELD_X - 1
-                if head[0] > FIELD_X - 1:
-                    head[0] = 0
-                # Move the y axis:
-                head[1] += self.snake.direction[1]
-                if head[1] < 0:
-                    head[1] = FIELD_Y - 1
-                if head[1] > FIELD_Y - 1:
-                    head[1] = 0
-                self.snake.body[0] = head
-                # Update the field_matrix with the new head
-                self.field_matrix[head[0]][head[1]] = SNAKE_FIELD
+        self.snake.move()
 
         # TODO: Update other objects
 
@@ -142,9 +161,3 @@ if __name__ == '__main__':
                 field.draw()
                 # TODO: Add food collision
                 # TODO: Add obstacle collision
-
-
-
-
-
-
