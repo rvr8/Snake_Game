@@ -4,13 +4,13 @@ import sys
 from pygame.locals import *
 
 # game parameters
-SPEED = 3
-MAX_FOOD = 3
-OBSTACLES_NUMBER = 8
+SPEED = 7
+MAX_FOOD = 10
+OBSTACLES_NUMBER = 10
 
 # game field size
-FIELD_X = 6
-FIELD_Y = 6
+FIELD_X = 10
+FIELD_Y = 10
 FIELD_CELL_SIZE = 30
 WINDOW_WIDTH = FIELD_X * FIELD_CELL_SIZE
 WINDOW_HEIGHT = FIELD_Y * FIELD_CELL_SIZE
@@ -125,14 +125,7 @@ class Field:
         # self.add_object(food)
         self.create_new_object(FOOD_FIELD)
         # Create obstacles
-        exclude_row = exclude_column = None
-        # Check that no obstacles will be created on the initial path of the snake
-        if self.snake.direction[0] != 0:
-            exclude_column = self.snake.body[0][1]
-        if self.snake.direction[1] != 0:
-            exclude_row = self.snake.body[0][0]
-        for i in range(OBSTACLES_NUMBER):
-            self.create_new_object(OBSTACLE_FIELD, exclude_row, exclude_column)
+        self.create_new_obstacles(OBSTACLES_NUMBER)
 
         self.draw()
 
@@ -168,6 +161,18 @@ class Field:
                 obj = FieldObject(object_type, [x, y])
                 self.add_object(obj)
                 return
+
+    def create_new_obstacles(self, number=1):
+        """
+        Creates new obstacles in safe zome (no obstacles will be created on the current path of the snake)
+        """
+        exclude_row = exclude_column = None
+        if self.snake.direction[0] != 0:
+            exclude_column = self.snake.body[0][1]
+        if self.snake.direction[1] != 0:
+            exclude_row = self.snake.body[0][0]
+        for i in range(number):
+            self.create_new_object(OBSTACLE_FIELD, exclude_row, exclude_column)
 
     def draw(self):
         """
@@ -232,11 +237,11 @@ def draw_text(text, surface, x, y):
 
 
 def check_exit_command():
-    for event in pygame.event.get():
-        if event.type == QUIT:
+    for e in pygame.event.get():
+        if e.type == QUIT:
             exit_game()
-        if event.type == KEYDOWN and not moved:
-            if event.key == K_ESCAPE:
+        if e.type == KEYDOWN:
+            if e.key == K_ESCAPE:
                 exit_game()
 
 
@@ -255,9 +260,9 @@ if __name__ == '__main__':
     # random.seed(2)
 
     # Snake starting parameters
-    s_position = [3, 2]
+    s_position = [random.randint(0, FIELD_X-1), random.randint(0, FIELD_Y-1)]
     s_length = 1
-    s_direction = [0, 1]
+    s_direction = random.choice([[1, 0], [-1, 0], [0, 1], [0, -1]])
     # Initialize the field
     field = Field(windowSurface, s_position, s_length, s_direction)
 
