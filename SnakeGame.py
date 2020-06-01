@@ -2,7 +2,7 @@ import pygame, random, sys
 from pygame.locals import *
 
 # game FPS
-SPEED = 10
+SPEED = 4
 
 # game field size
 FIELD_X = 10
@@ -31,22 +31,22 @@ TEXT_COLOR = (250, 250, 250)
 
 
 class FieldObject:
-    def __init__(self, object_type):
-        # self.length = 0
-        self.body = [[4, 0]]
-        # starting position of the snake's head   --- not needed?
-        # self.position = [1, 0]
+    def __init__(self, object_type, position):
+        # Default location
+        self.body = [position]
         # The type of field object
         self.object_type = object_type
 
 
 class Snake(FieldObject):
-    def __init__(self):
-        super(Snake, self).__init__(SNAKE_FIELD)
-        self.direction = [1, 0]
-        self.body.append([3, 0])
-        self.body.append([2, 0])
-        self.body.append([1, 0])
+    def __init__(self, position, length, direction):
+        super(Snake, self).__init__(SNAKE_FIELD, position)
+        self.direction = direction
+        # TODO: Check that length doesn't exceed field parameters
+        for i in range(length-1):
+            self.body.append([pos_x(position[0]-direction[0]), pos_y(position[1]-direction[1])])
+
+        self.tail = self.body[length-1]
 
     def change_direction(self, key):
         if key == K_w:  # up
@@ -65,7 +65,8 @@ class Snake(FieldObject):
         self.direction = d
 
     def move(self):
-        tail = len(self.body) - 1
+        # Save the tail in case of future eating
+        self.tail = self.body[len(self.body) - 1]
         # Move the snake's body towards the head. Move the head towards snake.direction
         for i in reversed(range(len(self.body))):
             if i > 0:
@@ -74,6 +75,15 @@ class Snake(FieldObject):
                 # Move the head of the snake
                 self.body[0] = [pos_x(self.body[0][0] + self.direction[0]),
                                 pos_y(self.body[0][1] + self.direction[1])]
+
+    def eat(self):
+        # Eating means adding one cell that was a tail before moving
+        self.body.append(self.tail)
+
+
+class Food(FieldObject):
+    def __init__(self, position):
+        super(Food, self).__init__(FOOD_FIELD, position)
 
 
 def pos_x(x):
@@ -97,16 +107,22 @@ def pos_y(y):
 class Field:
     # A class for main game field. Contains all the field info and references on all objects, including the snake,
     # the food, obstacles etc.
-    def __init__(self, surface):
+    def __init__(self, surface, s_position, s_length, s_direction, f_position):
         # Create an empty field
         self.surface = surface
         self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
+        # Cell reference matrix (a reference from each cell to an object occupying it)
+        self.reference_matrix = [[None for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
         # No objects in the field
         self.objects = []
         # Create the snake
-        self.snake = Snake()
+        self.snake = Snake(s_position, s_length, s_direction)
         self.add_object(self.snake)
         self.collision = False
+        # Create the food
+        food = Food(f_position)
+        self.add_object(food)
+
         self.draw()
 
     def add_object(self, obj: FieldObject):
@@ -114,16 +130,28 @@ class Field:
         # TODO: Check overlapping
 
         self.objects.append(obj)
-        # Update the field
+        # Update the field - is it necessary?
         for cell in obj.body:
             self.field_matrix[cell[0]][cell[1]] = obj.object_type
+            self.reference_matrix[cell[0]][cell[1]] = obj
+
+    def create_new_food(self):
+        while True:
+            x, y = random.randint(0, FIELD_X-1), random.randint(0, FIELD_Y-1)
+            if self.field_matrix[x][y] == EMPTY_FIELD:
+                food = Food([x, y])
+                self.add_object(food)
+                return
 
     def draw(self):
         # Update field matrix (used for collision check)
         self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
+        # Update cell reference matrix (used for obtaining objects from cells they are occupying)
+        self.reference_matrix = [[None for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
         for obj in self.objects:
             for cell in obj.body:
                 self.field_matrix[cell[0]][cell[1]] = obj.object_type
+                self.reference_matrix[cell[0]][cell[1]] = obj
         # Exception for snake's head
         self.field_matrix[self.snake.body[0][0]][self.snake.body[0][1]] = SNAKE_HEAD
 
@@ -146,9 +174,16 @@ class Field:
         if cell != EMPTY_FIELD:
             if cell == SNAKE_FIELD:
                 self.collision = True
+                print('Collided with yourself!')
             elif cell == FOOD_FIELD:
-                pass
-        # TODO: Add collision with your own body
+                self.snake.eat()
+                print('Ate food!')
+                # Remove this food object from the field
+                food_obj = self.reference_matrix[head[0]][head[1]]
+                self.objects.remove(food_obj)
+                del food_obj
+                self. create_new_food()
+
         # TODO: Add food collision
         # TODO: Add obstacle collision
         # TODO: Update other objects
@@ -175,25 +210,33 @@ if __name__ == '__main__':
     windowSurface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Snake game')
     pygame.mouse.set_visible(False)
+    random.seed(1)
 
+    # Snake starting parameters
+    s_position = [4, 0]
+    s_length = 4
+    s_direction = [1, 0]
+    # Food starting parameters
+    f_position = [6, 0]
     # Initialize the field
-    field = Field(windowSurface)
+    field = Field(windowSurface, s_position, s_length, s_direction, f_position)
 
     while True:
+        moved = False
         for event in pygame.event.get():
             if event.type == QUIT:
                 exit_game()
-            if event.type == KEYDOWN:
+            if event.type == KEYDOWN and not moved:
                 if event.key == K_ESCAPE:
                     exit_game()
                 # Assuming the player pressed one of 'w, a, s, d' buttons
                 field.snake.change_direction(event.key)
+                moved = True
 
         field.next_step()
         if not field.collision:
             field.draw()
         else:
-            print('Collided with yourself!')
             draw_text('Game over!', windowSurface, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
             while True:
                 for event in pygame.event.get():
