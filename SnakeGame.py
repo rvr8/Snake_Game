@@ -4,9 +4,9 @@ import sys
 from pygame.locals import *
 
 # game parameters
-SPEED = 6
+SPEED = 10
 MAX_FOOD = 10
-OBSTACLES_NUMBER = 3
+OBSTACLES_NUMBER = 5
 
 # game field size
 FIELD_X = 10
@@ -31,9 +31,6 @@ OBSTACLE_COLOR = (100, 100, 100)
 COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR,
                 SNAKE_HEAD: SNAKE_HEAD_COLOR, OBSTACLE_FIELD: OBSTACLE_COLOR}
 TEXT_COLOR = (250, 250, 250)
-
-
-# TODO: Add obstacles
 
 
 class FieldObject:
@@ -118,7 +115,7 @@ def pos_y(y):
 class Field:
     # A class for main game field. Contains all the field info and references on all objects, including the snake,
     # the food, obstacles etc.
-    def __init__(self, surface, s_position, s_length, s_direction, f_position):
+    def __init__(self, surface, s_position, s_length, s_direction):
         # Create an empty field
         self.surface = surface
         self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
@@ -145,7 +142,9 @@ class Field:
 
     def add_object(self, obj: FieldObject):
         # Adds an object to the field
-        # TODO: Check overlapping
+        for cell in obj.body:
+            if not self.field_matrix[cell[0]][cell[1]] == EMPTY_FIELD:
+                raise ValueError(f'Trying to create an overlapping object at {cell[0]}, {cell[1]}')
 
         self.objects.append(obj)
         # Update the field - is it necessary?
@@ -163,6 +162,7 @@ class Field:
                 obj = FieldObject(object_type, [x, y])
                 self.add_object(obj)
                 return
+
 
     def draw(self):
         """
@@ -209,13 +209,12 @@ class Field:
                 food_obj = self.reference_matrix[head[0]][head[1]]
                 self.objects.remove(food_obj)
                 del food_obj
+                # Create new food object
                 self.create_new_object(FOOD_FIELD)
                 self.food_eaten += 1
                 if self.food_eaten == MAX_FOOD:
                     self.max_food_reached = True
                     print('You won!')
-
-        # TODO: Add obstacle collision
 
 
 def draw_text(text, surface, x, y):
@@ -248,16 +247,14 @@ if __name__ == '__main__':
     windowSurface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Snake game')
     pygame.mouse.set_visible(False)
-    random.seed(1)
+    random.seed(2)
 
     # Snake starting parameters
     s_position = [4, 0]
     s_length = 4
     s_direction = [1, 0]
-    # Food starting parameters
-    f_position = [9, 0]
     # Initialize the field
-    field = Field(windowSurface, s_position, s_length, s_direction, f_position)
+    field = Field(windowSurface, s_position, s_length, s_direction)
 
     while True:
         moved = False
