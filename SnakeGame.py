@@ -4,13 +4,13 @@ import sys
 from pygame.locals import *
 
 # game parameters
-SPEED = 10
-MAX_FOOD = 10
-OBSTACLES_NUMBER = 5
+SPEED = 3
+MAX_FOOD = 3
+OBSTACLES_NUMBER = 8
 
 # game field size
-FIELD_X = 10
-FIELD_Y = 10
+FIELD_X = 6
+FIELD_Y = 6
 FIELD_CELL_SIZE = 30
 WINDOW_WIDTH = FIELD_X * FIELD_CELL_SIZE
 WINDOW_HEIGHT = FIELD_Y * FIELD_CELL_SIZE
@@ -46,8 +46,8 @@ class Snake(FieldObject):
         super(Snake, self).__init__(SNAKE_FIELD, position)
         self.direction = direction
         # TODO: Check that length doesn't exceed field parameters
-        for i in range(length - 1):
-            self.body.append([pos_x(position[0] - direction[0]), pos_y(position[1] - direction[1])])
+        for i in range(1, length):
+            self.body.append([pos_x(position[0] - direction[0]*i), pos_y(position[1] - direction[1]*i)])
 
         self.tail = self.body[length - 1]
 
@@ -82,16 +82,6 @@ class Snake(FieldObject):
     def eat(self):
         # Eating means adding one cell that was a tail before moving
         self.body.append(self.tail)
-
-
-# class Food(FieldObject):
-#     def __init__(self, position):
-#         super(Food, self).__init__(FOOD_FIELD, position)
-#
-#
-# class Obsctacle(FieldObject):
-#     def __init__(self, position):
-#         super(Obsctacle, self).__init__(OBSTACLE_FIELD, position)
 
 
 def pos_x(x):
@@ -135,8 +125,14 @@ class Field:
         # self.add_object(food)
         self.create_new_object(FOOD_FIELD)
         # Create obstacles
+        exclude_row = exclude_column = None
+        # Check that no obstacles will be created on the initial path of the snake
+        if self.snake.direction[0] != 0:
+            exclude_column = self.snake.body[0][1]
+        if self.snake.direction[1] != 0:
+            exclude_row = self.snake.body[0][0]
         for i in range(OBSTACLES_NUMBER):
-            self.create_new_object(OBSTACLE_FIELD)
+            self.create_new_object(OBSTACLE_FIELD, exclude_row, exclude_column)
 
         self.draw()
 
@@ -151,18 +147,27 @@ class Field:
         for cell in obj.body:
             self.field_matrix[cell[0]][cell[1]] = obj.object_type
             self.reference_matrix[cell[0]][cell[1]] = obj
+        # Exception for snake's head
+        if obj.object_type == SNAKE_FIELD:
+            self.field_matrix[obj.body[0][0]][obj.body[0][1]] = SNAKE_HEAD
 
-    def create_new_object(self, object_type):
+    def create_new_object(self, object_type, exclude_row=None, exclude_column=None):
         """
-        Creates an object of specified type in random coordinates on the field
+        Creates an object of specified type in random coordinates on the field.
+        Can exclude specified row or column (for normal start of the game)
         """
+        e_r = e_c = -1
+        if exclude_row is not None:
+            e_r = exclude_row
+        if exclude_column is not None:
+            e_c = exclude_column
+
         while True:
             x, y = random.randint(0, FIELD_X - 1), random.randint(0, FIELD_Y - 1)
-            if self.field_matrix[x][y] == EMPTY_FIELD:
+            if self.field_matrix[x][y] == EMPTY_FIELD and x != e_r and y != e_c:
                 obj = FieldObject(object_type, [x, y])
                 self.add_object(obj)
                 return
-
 
     def draw(self):
         """
@@ -247,12 +252,12 @@ if __name__ == '__main__':
     windowSurface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Snake game')
     pygame.mouse.set_visible(False)
-    random.seed(2)
+    # random.seed(2)
 
     # Snake starting parameters
-    s_position = [4, 0]
-    s_length = 4
-    s_direction = [1, 0]
+    s_position = [3, 2]
+    s_length = 1
+    s_direction = [0, 1]
     # Initialize the field
     field = Field(windowSurface, s_position, s_length, s_direction)
 
