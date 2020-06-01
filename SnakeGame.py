@@ -1,6 +1,9 @@
 import pygame, random, sys
 from pygame.locals import *
 
+# game FPS
+FPS = 60
+
 # game field size
 FIELD_X = 10
 FIELD_Y = 10
@@ -12,12 +15,15 @@ WINDOWHEIGHT = FIELD_Y * FIELD_CELL_SIZE
 EMPTY_FIELD = 0
 SNAKE_FIELD = 1
 FOOD_FIELD = 2
+SNAKE_HEAD = 3
 
 # game colors
 BACKGROUND_COLOR = (10, 10, 10)
-SNAKE_COLOR = (50, 200, 50)
+SNAKE_COLOR = (50, 150, 50)
 FOOD_COLOR = (220, 220, 50)
-COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR}
+SNAKE_HEAD_COLOR = (100, 250, 100)
+COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR,
+                SNAKE_HEAD: SNAKE_HEAD_COLOR}
 
 
 # TODO: Add obstacles
@@ -26,7 +32,7 @@ COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FI
 class FieldObject:
     def __init__(self, object_type):
         # self.length = 0
-        self.body = [[3, 0]]
+        self.body = [[4, 0]]
         # starting position of the snake's head   --- not needed?
         # self.position = [1, 0]
         # The type of field object
@@ -37,6 +43,7 @@ class Snake(FieldObject):
     def __init__(self):
         super(Snake, self).__init__(SNAKE_FIELD)
         self.direction = [1, 0]
+        self.body.append([3, 0])
         self.body.append([2, 0])
         self.body.append([1, 0])
 
@@ -114,6 +121,8 @@ class Field:
         for obj in self.objects:
             for cell in obj.body:
                 self.field_matrix[cell[0]][cell[1]] = obj.object_type
+        # Exception for snake's head
+        self.field_matrix[self.snake.body[0][0]][self.snake.body[0][1]] = SNAKE_HEAD
         self.surface.fill(BACKGROUND_COLOR)
         for i in range(FIELD_X):
             for j in range(FIELD_Y):
@@ -161,3 +170,4 @@ if __name__ == '__main__':
                 field.draw()
                 # TODO: Add food collision
                 # TODO: Add obstacle collision
+        mainClock.tick(FPS)
