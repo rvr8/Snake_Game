@@ -2,14 +2,14 @@ import pygame, random, sys
 from pygame.locals import *
 
 # game FPS
-FPS = 60
+SPEED = 10
 
 # game field size
 FIELD_X = 10
 FIELD_Y = 10
 FIELD_CELL_SIZE = 30
-WINDOWWIDTH = FIELD_X * FIELD_CELL_SIZE
-WINDOWHEIGHT = FIELD_Y * FIELD_CELL_SIZE
+WINDOW_WIDTH = FIELD_X * FIELD_CELL_SIZE
+WINDOW_HEIGHT = FIELD_Y * FIELD_CELL_SIZE
 
 # the field matrix
 EMPTY_FIELD = 0
@@ -24,6 +24,7 @@ FOOD_COLOR = (220, 220, 50)
 SNAKE_HEAD_COLOR = (100, 250, 100)
 COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR,
                 SNAKE_HEAD: SNAKE_HEAD_COLOR}
+TEXT_COLOR = (250, 250, 250)
 
 
 # TODO: Add obstacles
@@ -105,6 +106,7 @@ class Field:
         # Create the snake
         self.snake = Snake()
         self.add_object(self.snake)
+        self.collision = False
         self.draw()
 
     def add_object(self, obj: FieldObject):
@@ -114,15 +116,18 @@ class Field:
         self.objects.append(obj)
         # Update the field
         for cell in obj.body:
-            self.field_matrix[pos_x(cell[0])][pos_y(cell[1])] = obj.object_type
+            self.field_matrix[cell[0]][cell[1]] = obj.object_type
 
     def draw(self):
+        # Update field matrix (used for collision check)
         self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
         for obj in self.objects:
             for cell in obj.body:
                 self.field_matrix[cell[0]][cell[1]] = obj.object_type
         # Exception for snake's head
         self.field_matrix[self.snake.body[0][0]][self.snake.body[0][1]] = SNAKE_HEAD
+
+        # Draw the field
         self.surface.fill(BACKGROUND_COLOR)
         for i in range(FIELD_X):
             for j in range(FIELD_Y):
@@ -132,23 +137,42 @@ class Field:
         pass
 
     def next_step(self):
+        # Move the snake
+        self.snake.move()
+
+        # Check for collisions: snake's head is in new position
+        head = self.snake.body[0]
+        cell = self.field_matrix[head[0]][head[1]]
+        if cell != EMPTY_FIELD:
+            if cell == SNAKE_FIELD:
+                self.collision = True
+            elif cell == FOOD_FIELD:
+                pass
         # TODO: Add collision with your own body
         # TODO: Add food collision
         # TODO: Add obstacle collision
-
-        # If everything is all right, move the snake
-        self.snake.move()
-
         # TODO: Update other objects
 
-        self.draw()
+
+def draw_text(text, surface, x, y):
+    font = pygame.font.SysFont(None, 48)
+    text_obj = font.render(text, 1, TEXT_COLOR)
+    text_rect = text_obj.get_rect()
+    text_rect.center = (x, y)
+    surface.blit(text_obj, text_rect)
+    pygame.display.update()
+
+
+def exit_game():
+    pygame.quit()
+    sys.exit()
 
 
 if __name__ == '__main__':
     # Set up pygame, the window, and the mouse cursor.
     pygame.init()
     mainClock = pygame.time.Clock()
-    windowSurface = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
+    windowSurface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Snake game')
     pygame.mouse.set_visible(False)
 
@@ -158,16 +182,24 @@ if __name__ == '__main__':
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
-                pygame.quit()
-                sys.exit()
+                exit_game()
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
-                # Assuming the player pressd one of 'w, a, s, d' buttons
+                    exit_game()
+                # Assuming the player pressed one of 'w, a, s, d' buttons
                 field.snake.change_direction(event.key)
-                field.next_step()
-                field.draw()
-                # TODO: Add food collision
-                # TODO: Add obstacle collision
-        mainClock.tick(FPS)
+
+        field.next_step()
+        if not field.collision:
+            field.draw()
+        else:
+            print('Collided with yourself!')
+            draw_text('Game over!', windowSurface, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+            while True:
+                for event in pygame.event.get():
+                    if event.type == KEYDOWN:
+                        exit_game()
+            # TODO: Add food collision
+            # TODO: Add obstacle collision
+
+        mainClock.tick(SPEED)
