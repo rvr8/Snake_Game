@@ -1,9 +1,12 @@
-import pygame, random, sys
+import pygame
+import random
+import sys
 from pygame.locals import *
 
 # game parameters
 SPEED = 6
 MAX_FOOD = 10
+OBSTACLES_NUMBER = 3
 
 # game field size
 FIELD_X = 10
@@ -17,14 +20,16 @@ EMPTY_FIELD = 0
 SNAKE_FIELD = 1
 FOOD_FIELD = 2
 SNAKE_HEAD = 3
+OBSTACLE_FIELD = 4
 
 # game colors
 BACKGROUND_COLOR = (10, 10, 10)
 SNAKE_COLOR = (50, 150, 50)
 FOOD_COLOR = (220, 220, 50)
 SNAKE_HEAD_COLOR = (100, 250, 100)
+OBSTACLE_COLOR = (100, 100, 100)
 COLOR_MATRIX = {EMPTY_FIELD: BACKGROUND_COLOR, SNAKE_FIELD: SNAKE_COLOR, FOOD_FIELD: FOOD_COLOR,
-                SNAKE_HEAD: SNAKE_HEAD_COLOR}
+                SNAKE_HEAD: SNAKE_HEAD_COLOR, OBSTACLE_FIELD: OBSTACLE_COLOR}
 TEXT_COLOR = (250, 250, 250)
 
 
@@ -44,10 +49,10 @@ class Snake(FieldObject):
         super(Snake, self).__init__(SNAKE_FIELD, position)
         self.direction = direction
         # TODO: Check that length doesn't exceed field parameters
-        for i in range(length-1):
-            self.body.append([pos_x(position[0]-direction[0]), pos_y(position[1]-direction[1])])
+        for i in range(length - 1):
+            self.body.append([pos_x(position[0] - direction[0]), pos_y(position[1] - direction[1])])
 
-        self.tail = self.body[length-1]
+        self.tail = self.body[length - 1]
 
     def change_direction(self, key):
         if key == K_w:  # up
@@ -82,9 +87,14 @@ class Snake(FieldObject):
         self.body.append(self.tail)
 
 
-class Food(FieldObject):
-    def __init__(self, position):
-        super(Food, self).__init__(FOOD_FIELD, position)
+# class Food(FieldObject):
+#     def __init__(self, position):
+#         super(Food, self).__init__(FOOD_FIELD, position)
+#
+#
+# class Obsctacle(FieldObject):
+#     def __init__(self, position):
+#         super(Obsctacle, self).__init__(OBSTACLE_FIELD, position)
 
 
 def pos_x(x):
@@ -124,8 +134,12 @@ class Field:
         self.max_food_reached = False
         self.food_eaten = 0
         # Create the food
-        food = Food(f_position)
-        self.add_object(food)
+        # food = Food(f_position)
+        # self.add_object(food)
+        self.create_new_object(FOOD_FIELD)
+        # Create obstacles
+        for i in range(OBSTACLES_NUMBER):
+            self.create_new_object(OBSTACLE_FIELD)
 
         self.draw()
 
@@ -139,15 +153,21 @@ class Field:
             self.field_matrix[cell[0]][cell[1]] = obj.object_type
             self.reference_matrix[cell[0]][cell[1]] = obj
 
-    def create_new_food(self):
+    def create_new_object(self, object_type):
+        """
+        Creates an object of specified type in random coordinates on the field
+        """
         while True:
-            x, y = random.randint(0, FIELD_X-1), random.randint(0, FIELD_Y-1)
+            x, y = random.randint(0, FIELD_X - 1), random.randint(0, FIELD_Y - 1)
             if self.field_matrix[x][y] == EMPTY_FIELD:
-                food = Food([x, y])
-                self.add_object(food)
+                obj = FieldObject(object_type, [x, y])
+                self.add_object(obj)
                 return
 
     def draw(self):
+        """
+        Draws the field
+        """
         # Update field matrix (used for collision check)
         self.field_matrix = [[EMPTY_FIELD for _ in range(FIELD_X)] for _ in range(FIELD_Y)]
         # Update cell reference matrix (used for obtaining objects from cells they are occupying)
@@ -179,6 +199,9 @@ class Field:
             if cell == SNAKE_FIELD:
                 self.collision = True
                 print('Collided with yourself!')
+            elif cell == OBSTACLE_FIELD:
+                self.collision = True
+                print('Collided with obstacle!')
             elif cell == FOOD_FIELD:
                 self.snake.eat()
                 print('Ate food!')
@@ -186,10 +209,11 @@ class Field:
                 food_obj = self.reference_matrix[head[0]][head[1]]
                 self.objects.remove(food_obj)
                 del food_obj
-                self. create_new_food()
+                self.create_new_object(FOOD_FIELD)
                 self.food_eaten += 1
                 if self.food_eaten == MAX_FOOD:
                     self.max_food_reached = True
+                    print('You won!')
 
         # TODO: Add obstacle collision
 
@@ -258,7 +282,5 @@ if __name__ == '__main__':
                 check_exit_command()
         else:
             field.draw()
-
-            # TODO: Add obstacle collision
 
         mainClock.tick(SPEED)
