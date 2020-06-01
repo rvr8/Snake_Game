@@ -6,11 +6,12 @@ from pygame.locals import *
 # game parameters
 SPEED = 7
 MAX_FOOD = 10
-OBSTACLES_NUMBER = 10
+OBSTACLES_NUMBER = 5
+OBSTACLES_INCREMENT = 2
 
 # game field size
-FIELD_X = 10
-FIELD_Y = 10
+FIELD_X = 15
+FIELD_Y = 15
 FIELD_CELL_SIZE = 30
 WINDOW_WIDTH = FIELD_X * FIELD_CELL_SIZE
 WINDOW_HEIGHT = FIELD_Y * FIELD_CELL_SIZE
@@ -222,6 +223,9 @@ class Field:
                 # Create new food object
                 self.create_new_object(FOOD_FIELD)
                 self.food_eaten += 1
+                # Create new obstacle for each food cell eaten:
+                self.create_new_obstacles(OBSTACLES_INCREMENT)
+                # Check if player won
                 if self.food_eaten == MAX_FOOD:
                     self.max_food_reached = True
                     print('You won!')
