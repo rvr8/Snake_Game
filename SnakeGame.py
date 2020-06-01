@@ -1,8 +1,9 @@
 import pygame, random, sys
 from pygame.locals import *
 
-# game FPS
+# game parameters
 SPEED = 4
+MAX_FOOD = 10
 
 # game field size
 FIELD_X = 10
@@ -118,7 +119,10 @@ class Field:
         # Create the snake
         self.snake = Snake(s_position, s_length, s_direction)
         self.add_object(self.snake)
+        # Create game controlling variables
         self.collision = False
+        self.max_food_reached = False
+        self.food_eaten = 0
         # Create the food
         food = Food(f_position)
         self.add_object(food)
@@ -183,10 +187,11 @@ class Field:
                 self.objects.remove(food_obj)
                 del food_obj
                 self. create_new_food()
+                self.food_eaten += 1
+                if self.food_eaten == MAX_FOOD:
+                    self.max_food_reached = True
 
-        # TODO: Add food collision
         # TODO: Add obstacle collision
-        # TODO: Update other objects
 
 
 def draw_text(text, surface, x, y):
@@ -196,6 +201,15 @@ def draw_text(text, surface, x, y):
     text_rect.center = (x, y)
     surface.blit(text_obj, text_rect)
     pygame.display.update()
+
+
+def check_exit_command():
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            exit_game()
+        if event.type == KEYDOWN and not moved:
+            if event.key == K_ESCAPE:
+                exit_game()
 
 
 def exit_game():
@@ -217,7 +231,7 @@ if __name__ == '__main__':
     s_length = 4
     s_direction = [1, 0]
     # Food starting parameters
-    f_position = [6, 0]
+    f_position = [9, 0]
     # Initialize the field
     field = Field(windowSurface, s_position, s_length, s_direction, f_position)
 
@@ -234,15 +248,17 @@ if __name__ == '__main__':
                 moved = True
 
         field.next_step()
-        if not field.collision:
-            field.draw()
-        else:
+        if field.collision:
             draw_text('Game over!', windowSurface, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
             while True:
-                for event in pygame.event.get():
-                    if event.type == KEYDOWN:
-                        exit_game()
-            # TODO: Add food collision
+                check_exit_command()
+        elif field.max_food_reached:
+            draw_text('You won!', windowSurface, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+            while True:
+                check_exit_command()
+        else:
+            field.draw()
+
             # TODO: Add obstacle collision
 
         mainClock.tick(SPEED)
