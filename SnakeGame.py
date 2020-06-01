@@ -2,7 +2,7 @@ import pygame, random, sys
 from pygame.locals import *
 
 # game parameters
-SPEED = 4
+SPEED = 6
 MAX_FOOD = 10
 
 # game field size
